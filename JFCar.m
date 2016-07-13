@@ -50,4 +50,17 @@ objection_requires(@"engine") // 注销则获取为为nil
 
 
 
+@implementation FiveSpeedCar
+objection_register(FiveSpeedCar)
+
+@synthesize gearBox;
+
+objection_requires(@"gearBox")
+@end
+
+@implementation SixSpeedCar
+objection_register(SixSpeedCar)
+@synthesize gearBox;
+@end
+
 

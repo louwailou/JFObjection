@@ -46,5 +46,16 @@
 
 
 
+@protocol GearBox;
+
+@protocol ManualCar <NSObject>
+@property (nonatomic, retain) id<GearBox> gearBox;
+@end
+
+@interface FiveSpeedCar : JFCar<ManualCar>
+@end
+
+@interface SixSpeedCar : JFCar<ManualCar>
+@end
 
 

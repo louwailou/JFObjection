@@ -16,9 +16,9 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    
-    JSObjectionInjector *injector = [JSObjection createInjector];
-    [JSObjection setDefaultInjector:injector];
+//    
+//    JSObjectionInjector *injector = [JSObjection createInjector];
+//    [JSObjection setDefaultInjector:injector];
     
     // Override point for customization after application launch.
     return YES;

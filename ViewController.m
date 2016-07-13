@@ -16,14 +16,34 @@
 #import "ConfigurableCar.h"
 #import "SingletonFoo.h"
 #import "SingletonBar.h"
+
+#import "JFModule.h"
 @interface ViewController ()
 
 @end
 
 @implementation ViewController
+objection_register(ViewController)
+objection_requires(@"car")
+//objection_initializer(initWithNibName:bundle:, @"MyNib")
 
+- (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil {
+    if ((self = [super init])) {
+        self.nibName = nibNameOrNil;
+        self.bundle = nibBundleOrNil;
+    }
+    return self;
+}
+
+- (instancetype)initWithName:(NSString *)name {
+    if ((self = [super init])) {
+        self.name = name;
+    }
+    return self;
+}
 - (void)viewDidLoad {
     [super viewDidLoad];
+    /*
      id engine = [[JSObjection defaultInjector] getObject:[Engine class]];
     NSLog(@"engin = %@",engine);
     JFCar  *car = [[JSObjection defaultInjector] getObject:[JFCar class]];
@@ -81,13 +101,20 @@
     id SingletonItem2 = [[JSObjection createInjector] getObject:[SingletonItem class]];
  NSLog(@"SingletonItem1 == SingletonItem2  ??->  %d",SingletonItem1 == SingletonItem2); // 0
     
-    [self createDiffInjectContext];
+    */
+//    [self createDiffInjectContext];
+//    
+//    [self passArgums];
+//    
+//    [self namedInstance];
+//    
+//    [self cycyleReference];
+//    
+//    [self JFModule];
+//    
     
-    [self passArgums];
-    
-    [self namedInstance];
-    
-    [self cycyleReference];
+   // [self  providerModule];
+    [self metaClassBinding];
     // Do any additional setup after loading the view, typically from a nib.
 }
 - (void)createDiffInjectContext{
@@ -126,6 +153,7 @@
 }
 
 
+
 - (void)cycyleReference{
     //circular dependencies  are resolved between singletons
     
@@ -136,6 +164,99 @@
     
 
     
+}
+- (void)initialInstance{
+     ViewController *controller = [[JSObjection defaultInjector] getObject:[ViewController class] initializer:@selector(initWithName:) argumentList:@[@"The Name"]];
+    
+    Truck *truck = [[JSObjection defaultInjector] getObjectWithArgs:[Truck class], @"Ford", nil];
+    
+}
+
+- (void)JFModule{
+    Engine *engine1 = [[Engine alloc] init];
+    id<GearBox> gearBox = [[AfterMarketGearBox alloc] init];
+    
+   JFModule *module = [[JFModule alloc] initWithEngine:engine1 andGearBox:gearBox];
+    //module.instrumentInvalidEagerSingleton = YES; 使用singleton注册，但为标示为singleton 就有问题了
+    
+    
+    
+    gEagerSingletonHook = NO;
+    JSObjectionInjector *injector = [JSObjection createInjector:module];
+    [JSObjection setDefaultInjector:injector];
+    
+    //"merges the modules instance bindings with the injector's context"
+    // 将
+    Engine *engine = [[JSObjection defaultInjector] getObject:[Engine class]];
+    NSLog(@"engin == module.engin =->  %d",engine == module.engine);//  1
+    
+    //uses the module's bounded instance to fill out other objects dependencies
+    FiveSpeedCar *car = [[JSObjection defaultInjector] getObject:[FiveSpeedCar class]];
+    NSLog(@"car.engin = module.enginge = %d",car.engine== module.engine);//1
+    //assertThat(car.engine, is(sameInstance(module.engine)));
+    //assertThat(car.gearBox, is(sameInstance(module.gearBox)));
+    /***************这个为啥相等？？*********************/
+    NSLog(@"car.gearBox =module.gearBox = %d",car.gearBox == module.gearBox);//1
+    [car.gearBox shiftUp];
+    
+    
+    id<GearBox> gear =[[JSObjection defaultInjector] getObject:@protocol(GearBox)];
+    NSLog(@"gear == mudole.gearbox %d",gear == module.gearBox);//1
+    
+    
+    
+}
+
+// 使用provider 提供实例
+- (void)providerModule{
+    
+    ProviderModule *providerModule = [[ProviderModule alloc] init];
+    JSObjectionInjector *injector = [JSObjection createInjector:providerModule];
+    [JSObjection setDefaultInjector:injector];
+    //@"allows a bound protocol to be created through a provider"
+        FiveSpeedCar *car = [[JSObjection defaultInjector] getObject:[JFCar class]];
+        
+        NSLog(@"isinstance = %d",[car isKindOfClass:[FiveSpeedCar class]]);
+        NSLog(@"isinstance = %d",[car.brakes isKindOfClass:[Brakes class]]);
+        NSLog(@"engin == %@",car.engine);
+        //assertThat(car.engine, is(@"my engine"));
+  
+    /*
+     2016-07-13 13:00:07.487 JFObjection[40673:1139377] isinstance = 1
+     2016-07-13 13:00:07.488 JFObjection[40673:1139377] isinstance = 1
+     2016-07-13 13:00:07.488 JFObjection[40673:1139377] engin == my engine
+     */
+    //@"allows a bound class to be created through a provider"
+        AfterMarketGearBox *gearBox = [[JSObjection defaultInjector] getObject:@protocol(GearBox)];
+       // assertThat(gearBox, is(instanceOf([AfterMarketGearBox class])));
+    
+
+    
+    
+}
+
+- (void)metaClassBinding{
+   //@"meta class bindings" "supports binding to a meta class instance via a protocol"
+    
+    id<MetaCar> car = [[JSObjection defaultInjector] getObject:@protocol(MetaCar)];
+    // assertThat(car, is([Car class]));
+    //assertThat([car manufacture], is(instanceOf([Car class])));
+    
+        
+        //@"throws an exception if the given object is not a meta class", ^{
+        id<GearBox> gearBox = [[AfterMarketGearBox alloc] init];
+        Engine *engine = [[Engine alloc] init];
+        JFModule *module = [[JFModule alloc] initWithEngine:engine andGearBox:gearBox];
+       // module.instrumentInvalidMetaClass = YES;
+    
+   //调用该方法 会崩溃 [module configure];
+    //@"\"sneaky\" can not be bound to the protocol \"MetaCar\" because it is not a meta class";
+    JSObjectionInjector *injector = [JSObjection createInjector:module];
+    [JSObjection setDefaultInjector:injector];
+    
+         VisaCCProcessor *processor = [[JSObjection defaultInjector] getObject:@protocol(CreditCardProcessor)];//VisaCCProcessor:
+    BaseCreditCardProcessor * Pro = [[JSObjection defaultInjector] getObject:[BaseCreditCardProcessor class]];//VisaCCProcessor:
+    NSLog(@"processor = %@",processor);
 }
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
